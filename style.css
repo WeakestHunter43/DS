@@ -1,0 +1,258 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    background:#0f1117;
+
+    color:white;
+
+    font-family:sans-serif;
+
+    padding:20px;
+}
+
+.container{
+
+    max-width:900px;
+
+    margin:auto;
+}
+
+.card{
+
+    background:#1a1d26;
+
+    padding:20px;
+
+    border-radius:12px;
+
+    border:1px solid #2d3342;
+}
+
+h1{
+
+    text-align:center;
+
+    margin-bottom:20px;
+
+    font-size:32px;
+}
+
+.desc{
+
+    background:#11141c;
+
+    border:1px solid #2a3040;
+
+    padding:15px;
+
+    border-radius:8px;
+
+    margin-bottom:20px;
+
+    line-height:1.7;
+
+    color:#cbd5e1;
+
+    font-size:14px;
+}
+
+label{
+
+    display:block;
+
+    margin-top:15px;
+
+    margin-bottom:8px;
+
+    font-size:14px;
+}
+
+input[type=file],
+input[type=text]{
+
+    width:100%;
+
+    padding:12px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#252936;
+
+    color:white;
+
+    outline:none;
+}
+
+button{
+
+    width:100%;
+
+    margin-top:20px;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#3b82f6;
+
+    color:white;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+    transition:0.2s;
+}
+
+button:hover{
+
+    opacity:0.9;
+}
+
+button:disabled{
+
+    opacity:0.5;
+
+    cursor:not-allowed;
+}
+
+.uid-group{
+
+    margin-top:20px;
+
+    background:#11141c;
+
+    padding:15px;
+
+    border-radius:8px;
+
+    border:1px solid #2a3040;
+}
+
+.tutorial{
+
+    margin-bottom:20px;
+}
+
+.tutorial a{
+
+    display:block;
+
+    width:100%;
+
+    text-align:center;
+
+    text-decoration:none;
+
+    padding:14px;
+
+    border-radius:8px;
+
+    background:#ea580c;
+
+    color:white;
+
+    font-weight:bold;
+
+    transition:0.2s;
+}
+
+.tutorial a:hover{
+
+    opacity:0.9;
+}
+
+.socials{
+
+    display:flex;
+
+    gap:10px;
+
+    margin-top:20px;
+}
+
+.socials a{
+
+    flex:1;
+
+    text-align:center;
+
+    text-decoration:none;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    color:white;
+
+    font-weight:bold;
+
+    transition:0.2s;
+}
+
+.socials a:hover{
+
+    opacity:0.9;
+}
+
+.yt{
+
+    background:#dc2626;
+}
+
+.tg{
+
+    background:#0284c7;
+}
+
+
+.log{
+
+    margin-top:20px;
+
+    background:#11141c;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    border:1px solid #2a3040;
+
+    height:300px;
+
+    overflow:auto;
+
+    font-size:13px;
+
+    line-height:1.6;
+}
+
+.success{
+    color:#4ade80;
+}
+
+.fail{
+    color:#f87171;
+}
+
+@media(max-width:700px){
+
+    .socials{
+
+        flex-direction:column;
+    }
+
+    h1{
+
+        font-size:24px;
+    }
+}
