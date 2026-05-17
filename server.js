@@ -1,3 +1,7 @@
+// ======================================================
+// ELEMENTS
+// ======================================================
+
 const zipInput =
 document.getElementById("zipInput");
 
@@ -449,6 +453,15 @@ function patchByMarker(data,p){
         search.length +
         94;
 
+        if(
+            markerPos + marker.length
+            > data.length
+        ){
+
+            pos = found + 1;
+            continue;
+        }
+
         let ok = true;
 
         for(
@@ -571,7 +584,7 @@ async ()=>{
 
         let m =
         name.match(
-            /^ProjectData_slot_(\d+)\.bytes$/i
+            /(?:^|\/)ProjectData_slot_(\d+)\.bytes$/i
         );
 
         if(m){
@@ -584,7 +597,7 @@ async ()=>{
 
         m =
         name.match(
-            /^ProjectData_slot_(\d+)\.meta$/i
+            /(?:^|\/)ProjectData_slot_(\d+)\.meta$/i
         );
 
         if(m){
@@ -597,7 +610,7 @@ async ()=>{
 
         m =
         name.match(
-            /^UserLevelData_(\d+)\.bytes$/i
+            /(?:^|\/)UserLevelData_(\d+)\.bytes$/i
         );
 
         if(m){
@@ -619,8 +632,25 @@ async ()=>{
             !s.pbytes
         ){
 
+            const missing = [];
+
+            if(!s.ul)
+                missing.push(
+                    `UserLevelData_${slot}.bytes`
+                );
+
+            if(!s.meta)
+                missing.push(
+                    `ProjectData_slot_${slot}.meta`
+                );
+
+            if(!s.pbytes)
+                missing.push(
+                    `ProjectData_slot_${slot}.bytes`
+                );
+
             addLog(
-                `SKIP SLOT ${slot} MISSING FILES`,
+                `SKIP SLOT ${slot} MISSING: ${missing.join(", ")}`,
                 "fail"
             );
 
@@ -728,6 +758,8 @@ async ()=>{
 patchBtn.onclick =
 async ()=>{
 
+try{
+
     log.innerHTML = "";
 
     addLog("START PATCH");
@@ -742,9 +774,24 @@ async ()=>{
 
     inputs.forEach(i=>{
 
+        const value =
+        i.value.trim();
+
+        if(!/^\d+$/.test(value)){
+
+            addLog(
+                `INVALID UID: ${value}`,
+                "fail"
+            );
+
+            throw new Error(
+                "INVALID UID"
+            );
+        }
+
         uidMap[
             i.dataset.old
-        ] = i.value.trim();
+        ] = value;
     });
 
     for(const slot in validSlots){
@@ -755,10 +802,6 @@ async ()=>{
         addLog(
             `PROCESS SLOT ${slot}`
         );
-
-        // ===============================================
-        // USERLEVEL
-        // ===============================================
 
         const oldUlBuffer =
         await parsedZip
@@ -787,10 +830,6 @@ async ()=>{
         md5Bytes(
             ulData.buffer
         );
-
-        // ===============================================
-        // PROJECTDATA
-        // ===============================================
 
         const oldPBuffer =
         await parsedZip
@@ -853,10 +892,6 @@ async ()=>{
             pData.buffer
         );
 
-        // ===============================================
-        // META
-        // ===============================================
-
         const metaBuffer =
         await parsedZip
         .file(s.meta)
@@ -867,7 +902,6 @@ async ()=>{
             metaBuffer
         );
 
-        // USERLEVEL MD5
         metaData =
         replaceBytes(
 
@@ -878,7 +912,6 @@ async ()=>{
             newUlMd5
         );
 
-        // UID + SIZE + MD5
         if(uidInfo){
 
             const oldUid =
@@ -969,4 +1002,14 @@ async ()=>{
     a.click();
 
     addLog("DONE");
+
+}catch(e){
+
+    addLog(
+        `ERROR: ${e.message}`,
+        "fail"
+    );
+
+    console.error(e);
+}
 };
