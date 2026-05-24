@@ -1,7 +1,3 @@
-// ======================================================
-// ELEMENTS
-// ======================================================
-
 const zipInput =
 document.getElementById("zipInput");
 
@@ -86,13 +82,26 @@ const markerRules = [
 // LOG
 // ======================================================
 
-function addLog(t,cls="success"){
+function addLog(
+    text="",
+    cls="info"
+){
+
+    console.log(text);
 
     log.innerHTML +=
-    `<div class="${cls}">➜ ${t}</div>`;
+    `<div class="${cls}">${text}</div>`;
 
     log.scrollTop =
     log.scrollHeight;
+}
+
+function line(){
+
+    addLog(
+        "--------------------------------",
+        "line"
+    );
 }
 
 // ======================================================
@@ -153,7 +162,7 @@ function encodeSignedVarint64(num){
 }
 
 // ======================================================
-// PATCHES
+// PATCH RULES
 // ======================================================
 
 const markerPatches =
@@ -184,6 +193,24 @@ function hexToBytes(hex){
     .trim()
     .split(/\s+/)
     .map(x=>parseInt(x,16));
+}
+
+// ======================================================
+// HEX STRING
+// ======================================================
+
+function bytesToHex(bytes){
+
+    return Array
+    .from(bytes)
+    .map(x=>
+
+        x
+        .toString(16)
+        .padStart(2,"0")
+
+    )
+    .join(" ");
 }
 
 // ======================================================
@@ -224,45 +251,6 @@ function findPattern(
     }
 
     return -1;
-}
-
-// ======================================================
-// REPLACE BYTES
-// ======================================================
-
-function replaceBytes(
-    data,
-    oldBytes,
-    newBytes
-){
-
-    const pos =
-    findPattern(
-        data,
-        Array.from(oldBytes)
-    );
-
-    if(pos === -1)
-        return data;
-
-    const before =
-    Array.from(
-        data.slice(0,pos)
-    );
-
-    const after =
-    Array.from(
-        data.slice(
-            pos + oldBytes.length
-        )
-    );
-
-    return new Uint8Array([
-
-        ...before,
-        ...newBytes,
-        ...after
-    ]);
 }
 
 // ======================================================
@@ -348,10 +336,13 @@ function encodeVarint(value){
 }
 
 // ======================================================
-// UID INFO
+// FIND FIELD
 // ======================================================
 
-function getUidInfo(data){
+function findField(
+    data,
+    targetField
+){
 
     let pos = 0;
 
@@ -368,7 +359,10 @@ function getUidInfo(data){
         const wire =
         Number(tag & 7n);
 
+        // VARINT
         if(wire === 0){
+
+            const valueStart = pos;
 
             const [
                 value,
@@ -379,32 +373,60 @@ function getUidInfo(data){
 
             pos = p2;
 
-            if(field === 7){
+            if(field === targetField){
 
                 return {
 
-                    uid:
-                    value.toString(),
-
+                    field,
+                    wire,
+                    value,
+                    start:valueStart,
+                    end:p2,
                     raw
                 };
             }
         }
 
-        else if(wire === 1){
-
-            pos += 8;
-        }
-
+        // LENGTH
         else if(wire === 2){
 
             const [len,p2] =
             readVarint(data,pos);
 
-            pos =
+            const dataStart = p2;
+
+            const dataEnd =
             p2 + Number(len);
+
+            const bytes =
+            data.slice(
+                dataStart,
+                dataEnd
+            );
+
+            if(field === targetField){
+
+                return {
+
+                    field,
+                    wire,
+                    start:dataStart,
+                    end:dataEnd,
+                    raw:bytes,
+                    len:Number(len)
+                };
+            }
+
+            pos = dataEnd;
         }
 
+        // 64BIT
+        else if(wire === 1){
+
+            pos += 8;
+        }
+
+        // 32BIT
         else if(wire === 5){
 
             pos += 4;
@@ -417,6 +439,36 @@ function getUidInfo(data){
     }
 
     return null;
+}
+
+// ======================================================
+// REPLACE RANGE
+// ======================================================
+
+function replaceRange(
+    data,
+    start,
+    end,
+    newBytes
+){
+
+    return new Uint8Array([
+
+        ...data.slice(0,start),
+
+        ...newBytes,
+
+        ...data.slice(end)
+    ]);
+}
+
+// ======================================================
+// UID INFO
+// ======================================================
+
+function getUidInfo(data){
+
+    return findField(data,7);
 }
 
 // ======================================================
@@ -445,22 +497,20 @@ function patchByMarker(data,p){
             pos
         );
 
-        if(found === -1)
-            break;
+        if(found === -1){
+
+            addLog(
+                `× ${p.name}`,
+                "fail"
+            );
+
+            return;
+        }
 
         const markerPos =
         found +
         search.length +
         94;
-
-        if(
-            markerPos + marker.length
-            > data.length
-        ){
-
-            pos = found + 1;
-            continue;
-        }
 
         let ok = true;
 
@@ -493,10 +543,11 @@ function patchByMarker(data,p){
             }
 
             addLog(
-                `PATCHED ${p.name}`
+                `✓ ${p.name} @${found}`,
+                "patch"
             );
 
-            break;
+            return;
         }
 
         pos = found + 1;
@@ -527,6 +578,11 @@ async ()=>{
     if(!file)
         return;
 
+    addLog(
+        `FILE: ${file.name}`,
+        "title"
+    );
+
     if(
         !file.name
         .toLowerCase()
@@ -541,50 +597,34 @@ async ()=>{
         return;
     }
 
-    let zipBuffer;
-
-    try{
-
-        zipBuffer =
-        await file.arrayBuffer();
-
-    }catch(e){
-
-        addLog(
-            "FILE READ FAILED",
-            "fail"
-        );
-
-        return;
-    }
-
     try{
 
         parsedZip =
         await JSZip.loadAsync(
-            zipBuffer
+            await file.arrayBuffer()
         );
 
     }catch(e){
 
         addLog(
-            "INVALID OR CORRUPTED ZIP",
+            "INVALID ZIP",
             "fail"
         );
 
         return;
     }
-
-    addLog("ZIP LOADED");
 
     const slots = {};
 
     Object.keys(parsedZip.files)
     .forEach(name=>{
 
+        const clean =
+        name.split("/").pop();
+
         let m =
-        name.match(
-            /(?:^|\/)ProjectData_slot_(\d+)\.bytes$/i
+        clean.match(
+            /^ProjectData_slot_(\d+)\.bytes$/i
         );
 
         if(m){
@@ -596,8 +636,8 @@ async ()=>{
         }
 
         m =
-        name.match(
-            /(?:^|\/)ProjectData_slot_(\d+)\.meta$/i
+        clean.match(
+            /^ProjectData_slot_(\d+)\.meta$/i
         );
 
         if(m){
@@ -609,8 +649,8 @@ async ()=>{
         }
 
         m =
-        name.match(
-            /(?:^|\/)UserLevelData_(\d+)\.bytes$/i
+        clean.match(
+            /^UserLevelData_(\d+)\.bytes$/i
         );
 
         if(m){
@@ -622,59 +662,58 @@ async ()=>{
         }
     });
 
+    addLog(
+        `SLOTS: ${Object.keys(slots).length}`,
+        "info"
+    );
+
+    line();
+
     for(const slot in slots){
 
         const s = slots[slot];
 
-        if(
-            !s.ul ||
-            !s.meta ||
-            !s.pbytes
-        ){
+        const missing = [];
 
-            const missing = [];
+        if(!s.ul)
+            missing.push(
+                `UserLevelData_${slot}.bytes`
+            );
 
-            if(!s.ul)
-                missing.push(
-                    `UserLevelData_${slot}.bytes`
-                );
+        if(!s.meta)
+            missing.push(
+                `ProjectData_slot_${slot}.meta`
+            );
 
-            if(!s.meta)
-                missing.push(
-                    `ProjectData_slot_${slot}.meta`
-                );
+        if(!s.pbytes)
+            missing.push(
+                `ProjectData_slot_${slot}.bytes`
+            );
 
-            if(!s.pbytes)
-                missing.push(
-                    `ProjectData_slot_${slot}.bytes`
-                );
+        if(missing.length){
 
             addLog(
-                `SKIP SLOT ${slot} MISSING: ${missing.join(", ")}`,
+                `SKIP SLOT ${slot}`,
                 "fail"
             );
+
+            missing.forEach(f=>{
+
+                addLog(
+                    `Missing: ${f}`,
+                    "fail"
+                );
+            });
+
+            line();
 
             continue;
         }
 
-        let buffer;
-
-        try{
-
-            buffer =
-            await parsedZip
-            .file(s.pbytes)
-            .async("arraybuffer");
-
-        }catch(e){
-
-            addLog(
-                `READ FAIL SLOT ${slot}`,
-                "fail"
-            );
-
-            continue;
-        }
+        const buffer =
+        await parsedZip
+        .file(s.pbytes)
+        .async("arraybuffer");
 
         const info =
         getUidInfo(
@@ -692,7 +731,7 @@ async ()=>{
         }
 
         const uid =
-        info.uid;
+        info.value.toString();
 
         if(!uidGroups[uid])
             uidGroups[uid] = [];
@@ -703,7 +742,8 @@ async ()=>{
         validSlots[slot] = s;
 
         addLog(
-            `VALID SLOT ${slot}`
+            `SLOT:${slot}, UID=${uid}`,
+            "slot"
         );
     }
 
@@ -712,6 +752,8 @@ async ()=>{
         === 0
     ){
 
+        line();
+
         addLog(
             "NO VALID SLOT FOUND",
             "fail"
@@ -719,6 +761,8 @@ async ()=>{
 
         return;
     }
+
+    line();
 
     Object.keys(uidGroups)
     .forEach(uid=>{
@@ -748,7 +792,10 @@ async ()=>{
 
     patchBtn.disabled = false;
 
-    addLog("ZIP READY");
+    addLog(
+        "ZIP READY",
+        "success"
+    );
 });
 
 // ======================================================
@@ -758,14 +805,12 @@ async ()=>{
 patchBtn.onclick =
 async ()=>{
 
-try{
-
     log.innerHTML = "";
-
-    addLog("START PATCH");
 
     const outZip =
     new JSZip();
+
+    const finalUidGroups = {};
 
     const inputs =
     uidContainer.querySelectorAll("input");
@@ -774,24 +819,9 @@ try{
 
     inputs.forEach(i=>{
 
-        const value =
-        i.value.trim();
-
-        if(!/^\d+$/.test(value)){
-
-            addLog(
-                `INVALID UID: ${value}`,
-                "fail"
-            );
-
-            throw new Error(
-                "INVALID UID"
-            );
-        }
-
         uidMap[
             i.dataset.old
-        ] = value;
+        ] = i.value.trim();
     });
 
     for(const slot in validSlots){
@@ -799,9 +829,22 @@ try{
         const s =
         validSlots[slot];
 
+        let patchSuccess = 0;
+
+        let patchFail = 0;
+
+        line();
+
         addLog(
-            `PROCESS SLOT ${slot}`
+            `SLOT:${slot}`,
+            "title"
         );
+
+        line();
+
+        // ==================================================
+        // USERLEVEL
+        // ==================================================
 
         const oldUlBuffer =
         await parsedZip
@@ -813,23 +856,14 @@ try{
             oldUlBuffer
         );
 
-        const oldUlMd5 =
-        md5Bytes(
-            oldUlBuffer
-        );
-
-        markerPatches.forEach(p=>{
-
-            patchByMarker(
-                ulData,
-                p
-            );
-        });
-
-        const newUlMd5 =
+        const finalUlMd5 =
         md5Bytes(
             ulData.buffer
         );
+
+        // ==================================================
+        // PROJECTDATA
+        // ==================================================
 
         const oldPBuffer =
         await parsedZip
@@ -841,56 +875,93 @@ try{
             oldPBuffer
         );
 
-        const oldPSize =
+        const finalPSize =
         pData.length;
 
-        const oldPMd5 =
+        const finalPMd5 =
         md5Bytes(
-            oldPBuffer
+            pData.buffer
         );
 
         const uidInfo =
         getUidInfo(pData);
 
+        let oldUid = "";
+
+        let newUid = "";
+
         if(uidInfo){
 
-            const oldUid =
-            uidInfo.uid;
+            oldUid =
+            uidInfo.value.toString();
 
-            const newUid =
-            uidMap[oldUid];
+            newUid =
+            uidMap[oldUid] || oldUid;
 
-            if(
-                newUid &&
-                newUid !== oldUid
-            ){
+            addLog(
+                `UID`,
+                "info"
+            );
 
-                const newVarint =
-                encodeVarint(newUid);
+            addLog(
+                oldUid,
+                "info"
+            );
 
-                pData =
-                replaceBytes(
+            addLog(
+                `UID Status`,
+                "info"
+            );
 
-                    pData,
+            if(newUid !== oldUid){
 
-                    uidInfo.raw,
-
-                    newVarint
+                addLog(
+                    `Updated`,
+                    "warn"
                 );
 
                 addLog(
-                    `UID ${oldUid} → ${newUid}`
+                    `${oldUid}`,
+                    "warn"
+                );
+
+                addLog(
+                    `→`,
+                    "warn"
+                );
+
+                addLog(
+                    `${newUid}`,
+                    "warn"
+                );
+
+                pData =
+                replaceRange(
+
+                    pData,
+
+                    uidInfo.start,
+
+                    uidInfo.end,
+
+                    encodeVarint(newUid)
+                );
+            }
+
+            else{
+
+                addLog(
+                    `Unchanged`,
+                    "success"
                 );
             }
         }
 
-        const newPSize =
-        pData.length;
+        line();
 
-        const newPMd5 =
-        md5Bytes(
-            pData.buffer
-        );
+        // ==================================================
+        // META
+        // ==================================================
 
         const metaBuffer =
         await parsedZip
@@ -902,82 +973,577 @@ try{
             metaBuffer
         );
 
-        metaData =
-        replaceBytes(
-
+        const ulMd5Field =
+        findField(
             metaData,
-
-            oldUlMd5,
-
-            newUlMd5
+            19
         );
 
-        if(uidInfo){
+        let cancelSlot = false;
 
-            const oldUid =
-            uidInfo.uid;
+        let metaUlMd5 = "";
 
-            const newUid =
-            uidMap[oldUid];
+        if(
+            ulMd5Field &&
+            ulMd5Field.wire === 2
+        ){
+
+            metaUlMd5 =
+            bytesToHex(
+                ulMd5Field.raw
+            );
+
+            const realUlMd5 =
+            bytesToHex(
+                finalUlMd5
+            );
+
+            addLog(
+                `UserLevel MD5`,
+                "title"
+            );
+
+            line();
+
+            addLog(
+                `Meta UserLevel MD5`,
+                "info"
+            );
+
+            addLog(
+                metaUlMd5,
+                "info"
+            );
+
+            addLog(
+                `File UserLevel MD5`,
+                "info"
+            );
+
+            addLog(
+                realUlMd5,
+                "info"
+            );
+
+            addLog(
+                `Status`,
+                "info"
+            );
 
             if(
-                newUid &&
-                newUid !== oldUid
+                metaUlMd5 === realUlMd5
             ){
 
-                metaData =
-                replaceBytes(
-
-                    metaData,
-
-                    encodeVarint(oldUid),
-
-                    encodeVarint(newUid)
+                addLog(
+                    `✓`,
+                    "success"
                 );
+            }
 
-                metaData =
-                replaceBytes(
+            else{
 
-                    metaData,
-
-                    encodeVarint(oldPSize),
-
-                    encodeVarint(newPSize)
-                );
-
-                metaData =
-                replaceBytes(
-
-                    metaData,
-
-                    oldPMd5,
-
-                    newPMd5
+                addLog(
+                    `×`,
+                    "fail"
                 );
 
                 addLog(
-                    "META UPDATED"
+                    `SLOT CANCELLED`,
+                    "fail"
+                );
+
+                cancelSlot = true;
+            }
+        }
+
+        if(cancelSlot){
+
+            line();
+
+            continue;
+        }
+
+        line();
+
+        // ==================================================
+        // SIZE
+        // ==================================================
+
+        const sizeField =
+        findField(
+            metaData,
+            15
+        );
+
+        let metaSize = 0;
+
+        addLog(
+            `ProjectData Size`,
+            "title"
+        );
+
+        line();
+
+        if(sizeField){
+
+            metaSize =
+            Number(sizeField.value);
+
+            addLog(
+                `Meta Size`,
+                "info"
+            );
+
+            addLog(
+                `${metaSize}`,
+                "info"
+            );
+
+            addLog(
+                `File Size`,
+                "info"
+            );
+
+            addLog(
+                `${finalPSize}`,
+                "info"
+            );
+
+            addLog(
+                `Status`,
+                "info"
+            );
+
+            if(metaSize === finalPSize){
+
+                addLog(
+                    `✓`,
+                    "success"
+                );
+            }
+
+            else{
+
+                addLog(
+                    `×`,
+                    "warn"
                 );
             }
         }
 
-        outZip.file(
-            s.ul,
-            ulData
+        line();
+
+        // ==================================================
+        // PROJECTDATA MD5
+        // ==================================================
+
+        const pMd5Field =
+        findField(
+            metaData,
+            20
         );
 
-        outZip.file(
-            s.pbytes,
-            pData
+        let oldMetaPMd5 = "";
+
+        addLog(
+            `ProjectData MD5`,
+            "title"
         );
 
-        outZip.file(
-            s.meta,
-            metaData
+        line();
+
+        if(
+            pMd5Field &&
+            pMd5Field.wire === 2
+        ){
+
+            oldMetaPMd5 =
+            bytesToHex(
+                pMd5Field.raw
+            );
+
+            const realMd5Hex =
+            bytesToHex(
+                finalPMd5
+            );
+
+            addLog(
+                `Meta ProjectData MD5`,
+                "info"
+            );
+
+            addLog(
+                oldMetaPMd5,
+                "info"
+            );
+
+            addLog(
+                `File ProjectData MD5`,
+                "info"
+            );
+
+            addLog(
+                realMd5Hex,
+                "info"
+            );
+
+            addLog(
+                `Status`,
+                "info"
+            );
+
+            if(
+                oldMetaPMd5 === realMd5Hex
+            ){
+
+                addLog(
+                    `✓`,
+                    "success"
+                );
+            }
+
+            else{
+
+                addLog(
+                    `×`,
+                    "warn"
+                );
+            }
+        }
+
+        line();
+
+        // ==================================================
+        // PATCHING
+        // ==================================================
+
+        addLog(
+            `PATCHING`,
+            "title"
+        );
+
+        line();
+
+        markerPatches.forEach(p=>{
+
+            const before =
+            ulData.slice();
+
+            patchByMarker(
+                ulData,
+                p
+            );
+
+            let changed = false;
+
+            for(
+                let i=0;
+                i<ulData.length;
+                i++
+            ){
+
+                if(before[i] !== ulData[i]){
+
+                    changed = true;
+                    break;
+                }
+            }
+
+            if(changed)
+                patchSuccess++;
+            else
+                patchFail++;
+        });
+
+        addLog(
+            `Patched: ${patchSuccess}`,
+            "success"
+        );
+
+        addLog(
+            `Failed: ${patchFail}`,
+            "fail"
+        );
+
+        line();
+
+        // ==================================================
+        // NEW VALUES
+        // ==================================================
+
+        const newUlMd5 =
+        md5Bytes(
+            ulData.buffer
+        );
+
+        const newPSize =
+        pData.length;
+
+        const newPMd5 =
+        md5Bytes(
+            pData.buffer
+        );
+
+        // ==================================================
+        // UPDATE META
+        // ==================================================
+
+        addLog(
+            `Metadata Update`,
+            "update"
+        );
+
+        line();
+
+        addLog(
+            `UserLevel MD5`,
+            "update"
+        );
+
+        addLog(
+            metaUlMd5,
+            "update"
+        );
+
+        addLog(
+            `→`,
+            "update"
+        );
+
+        addLog(
+            bytesToHex(newUlMd5),
+            "update"
+        );
+
+        addLog(
+            `ProjectData MD5`,
+            "update"
+        );
+
+        addLog(
+            oldMetaPMd5,
+            "update"
+        );
+
+        addLog(
+            `→`,
+            "update"
+        );
+
+        addLog(
+            bytesToHex(newPMd5),
+            "update"
+        );
+
+        addLog(
+            `Size`,
+            "update"
+        );
+
+        addLog(
+            `${metaSize}`,
+            "update"
+        );
+
+        addLog(
+            `→`,
+            "update"
+        );
+
+        addLog(
+            `${newPSize}`,
+            "update"
+        );
+
+        // ==================================================
+        // APPLY META
+        // ==================================================
+
+        if(sizeField){
+
+            metaData =
+            replaceRange(
+
+                metaData,
+
+                sizeField.start,
+
+                sizeField.end,
+
+                encodeVarint(newPSize)
+            );
+        }
+
+        if(
+            pMd5Field &&
+            pMd5Field.wire === 2
+        ){
+
+            metaData =
+            replaceRange(
+
+                metaData,
+
+                pMd5Field.start,
+
+                pMd5Field.end,
+
+                newPMd5
+            );
+        }
+
+        if(
+            ulMd5Field &&
+            ulMd5Field.wire === 2
+        ){
+
+            metaData =
+            replaceRange(
+
+                metaData,
+
+                ulMd5Field.start,
+
+                ulMd5Field.end,
+
+                newUlMd5
+            );
+        }
+
+        // ==================================================
+        // META UID
+        // ==================================================
+
+        const metaUidField =
+        findField(
+            metaData,
+            49
+        );
+
+        if(
+            metaUidField &&
+            newUid !== oldUid
+        ){
+
+            line();
+
+            addLog(
+                `Meta UID Update`,
+                "update"
+            );
+
+            line();
+
+            addLog(
+                oldUid,
+                "update"
+            );
+
+            addLog(
+                `→`,
+                "update"
+            );
+
+            addLog(
+                newUid,
+                "update"
+            );
+
+            metaData =
+            replaceRange(
+
+                metaData,
+
+                metaUidField.start,
+
+                metaUidField.end,
+
+                encodeVarint(newUid)
+            );
+        }
+
+        // ==================================================
+        // STORE UID GROUP
+        // ==================================================
+
+        const finalUid =
+        newUid || oldUid;
+
+        if(!finalUidGroups[finalUid]){
+
+            finalUidGroups[finalUid] = [];
+        }
+
+        finalUidGroups[finalUid]
+        .push({
+
+            ulData,
+            pData,
+            metaData,
+            files:s
+        });
+
+        line();
+
+        addLog(
+            `SLOT ${slot} SAVED`,
+            "success"
         );
     }
 
-    addLog("BUILD ZIP");
+    // ==================================================
+    // BUILD ZIP
+    // ==================================================
+
+    const uidKeys =
+    Object.keys(finalUidGroups);
+
+    const singleUid =
+    uidKeys.length === 1;
+
+    uidKeys.forEach(uid=>{
+
+        finalUidGroups[uid]
+        .forEach(entry=>{
+
+            const base =
+
+            singleUid
+            ? ""
+            : `${uid}/`;
+
+            outZip.file(
+                base +
+                entry.files.ul
+                .split("/")
+                .pop(),
+                entry.ulData
+            );
+
+            outZip.file(
+                base +
+                entry.files.pbytes
+                .split("/")
+                .pop(),
+                entry.pData
+            );
+
+            outZip.file(
+                base +
+                entry.files.meta
+                .split("/")
+                .pop(),
+                entry.metaData
+            );
+        });
+    });
+
+    line();
+
+    addLog(
+        `BUILD ZIP`,
+        "title"
+    );
 
     const finalZip =
     await outZip.generateAsync({
@@ -1001,15 +1567,15 @@ try{
 
     a.click();
 
-    addLog("DONE");
-
-}catch(e){
+    line();
 
     addLog(
-        `ERROR: ${e.message}`,
-        "fail"
+        `DONE`,
+        "success"
     );
 
-    console.error(e);
-}
+    addLog(
+        `OUTPUT: patched_${timestamp}.zip`,
+        "success"
+    );
 };

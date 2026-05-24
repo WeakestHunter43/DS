@@ -3,108 +3,377 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta name="viewport"
-    content="width=device-width, initial-scale=1.0">
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-    <title>
-        FFC PATCH TOOL
-    </title>
+<meta
+http-equiv="Cache-Control"
+content="no-cache, no-store, must-revalidate">
 
-    <link rel="stylesheet" href="style.css">
+<meta
+http-equiv="Pragma"
+content="no-cache">
+
+<meta
+http-equiv="Expires"
+content="0">
+
+<title>
+FFC PATCH TOOL
+</title>
+
+<link
+rel="stylesheet"
+href="style.css">
 
 </head>
 
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <div class="card">
+    <div class="card">
 
-            <h1>
-                FFC PATCH TOOL
-            </h1>
+        <h1>
+            FFC PATCH TOOL
+        </h1>
 
-            <div class="desc">
-            
-                This tool only works for maps
-                created using the supported
-                function structure and exact
-                coding format.
-            
-                <br><br>
-            
-                Unsupported map structures
-                may fail to patch correctly.
-            
-            </div>
-            
-            <div class="tutorial">
-            
-                <a
-                href="https://youtu.be/-qVME_uLmiQ"
-                target="_blank">
-            
-                    WATCH TUTORIAL VIDEO
-            
-                </a>
-            
-            </div>
+        <!-- ========================================= -->
+        <!-- DESCRIPTION -->
+        <!-- ========================================= -->
 
-            <label>
-                Select ZIP File
-            </label>
-
-            <input
-            type="file"
-            id="zipInput"
-            accept=".zip">
-
-            <div id="uidContainer"></div>
+        <div class="desc-wrapper">
 
             <button
-            id="patchBtn"
-            disabled>
+            class="desc-toggle"
+            id="descToggle">
 
-                PATCH & DOWNLOAD ZIP
+                SHOW DESCRIPTION
 
             </button>
-            
-            <div class="log" id="log"></div>
 
-            <div class="socials">
+            <div
+            class="desc collapsed"
+            id="descBox">
+
+                This tool patches supported
+                Craftland map protobuf files
+                using binary protobuf editing
+                and automatic metadata repair.
+
+                <br><br>
+
+                The patcher directly reads
+                protobuf fields from meta
+                files instead of blindly
+                replacing bytes.
+
+                <br><br>
+
+                Required ZIP structure:
+
+                <br><br>
+
+                • UserLevelData_X.bytes
+                <br>
+
+                • ProjectData_slot_X.bytes
+                <br>
+
+                • ProjectData_slot_X.meta
+
+                <br><br>
+
+                Every slot must contain
+                all 3 required files.
+
+                <br><br>
+
+                Slots missing any required
+                file are skipped automatically.
+
+                <br><br>
+
+                Supported features:
+
+                <br><br>
+
+                • Skin patching
+                <br>
+
+                • UID modification
+                <br>
+
+                • Automatic metadata repair
+                <br>
+
+                • Automatic ProjectData
+                MD5 recalculation
+                <br>
+
+                • Automatic ProjectData
+                size recalculation
+                <br>
+
+                • Meta UID update
+                <br>
+
+                • Nested ZIP support
+                <br>
+
+                • Invalid slot detection
+                <br>
+
+                • Multiple UID grouping
+                in output ZIP
+                <br>
+
+                • Detailed verification logs
+                <br>
+
+                • Real protobuf field parsing
+
+                <br><br>
+
+                Security / validation:
+
+                <br><br>
+
+                • UserLevel MD5 is verified
+                before patching
+                <br>
+
+                • Invalid UserLevel MD5
+                cancels slot processing
+                <br>
+
+                • ProjectData MD5 mismatch
+                is repaired automatically
+                <br>
+
+                • ProjectData size mismatch
+                is repaired automatically
+
+                <br><br>
+
+                Required conditions:
+
+                <br><br>
+
+                • Original protobuf structure
+                must remain valid
+                <br>
+
+                • Maps must use supported
+                coding/function structure
+                <br>
+
+                • Corrupted protobuf files
+                are unsupported
+                <br>
+
+                • Unsupported custom map
+                structures may fail
+                <br>
+
+                • Broken protobuf field layout
+                may fail
+                <br>
+
+                • Random hex edits may
+                corrupt maps
+
+                <br><br>
+
+                Output ZIP behavior:
+
+                <br><br>
+
+                • If all slots use same UID,
+                files remain at ZIP root
+                <br>
+
+                • If multiple UIDs exist,
+                files are grouped into
+                UID folders automatically
+
+                <br><br>
+
+                The patcher recalculates:
+
+                <br><br>
+
+                • UserLevel MD5
+                <br>
+
+                • ProjectData MD5
+                <br>
+
+                • ProjectData size
+                <br>
+
+                • UID metadata fields
+
+                <br><br>
+
+                This fixes maps where
+                users manually edited files
+                but forgot to update:
+
+                <br><br>
+
+                • MD5 hashes
+                <br>
+
+                • protobuf sizes
+                <br>
+
+                • UID metadata
+                <br>
+
+                • internal meta values
+
+                <br><br>
+
+                Tutorial:
+
+                <br><br>
 
                 <a
-                href="https://youtube.com/@demonsubdueryt"
+                href="https://youtu.be/-qVME_uLmiQ"
                 target="_blank"
-                class="yt">
+                class="tutorial">
 
-                    YOUTUBE
+                    WATCH TUTORIAL
 
                 </a>
 
-                <a
-                href="https://t.me/freefirecraftlandgroupx"
-                target="_blank"
-                class="tg">
-
-                    TELEGRAM
-
-                </a>
             </div>
 
-            
+        </div>
+
+        <!-- ========================================= -->
+        <!-- FILE -->
+        <!-- ========================================= -->
+
+        <label>
+            Select ZIP File
+        </label>
+
+        <input
+        type="file"
+        id="zipInput"
+        accept=".zip">
+
+        <!-- ========================================= -->
+        <!-- UID INPUTS -->
+        <!-- ========================================= -->
+
+        <div id="uidContainer"></div>
+
+        <!-- ========================================= -->
+        <!-- PATCH BUTTON -->
+        <!-- ========================================= -->
+
+        <button
+        id="patchBtn"
+        disabled>
+
+            PATCH & DOWNLOAD ZIP
+
+        </button>
+
+        <!-- ========================================= -->
+        <!-- LOG -->
+        <!-- ========================================= -->
+
+        <div
+        class="log"
+        id="log"></div>
+
+        <!-- ========================================= -->
+        <!-- SOCIALS -->
+        <!-- ========================================= -->
+
+        <div class="socials">
+
+            <a
+            href="https://youtube.com/@demonsubdueryt"
+            target="_blank"
+            class="yt">
+
+                YOUTUBE
+
+            </a>
+
+            <a
+            href="https://t.me/freefirecraftlandgroupx"
+            target="_blank"
+            class="tg">
+
+                TELEGRAM
+
+            </a>
 
         </div>
 
     </div>
 
-    <script src="spark-md5.min.js"></script>
+</div>
 
-    <script src="jszip.min.js"></script>
+<!-- ========================================= -->
+<!-- LIBS -->
+<!-- ========================================= -->
 
-    <script src="server.js"></script>
+<script src="spark-md5.min.js"></script>
+
+<script src="jszip.min.js"></script>
+
+<script src="server.js"></script>
+
+<!-- ========================================= -->
+<!-- DESCRIPTION TOGGLE -->
+<!-- ========================================= -->
+
+<script>
+
+const descToggle =
+document.getElementById(
+    "descToggle"
+);
+
+const descBox =
+document.getElementById(
+    "descBox"
+);
+
+descToggle.onclick = ()=>{
+
+    descBox.classList.toggle(
+        "collapsed"
+    );
+
+    if(
+        descBox.classList.contains(
+            "collapsed"
+        )
+    ){
+
+        descToggle.innerText =
+        "SHOW DESCRIPTION";
+    }
+
+    else{
+
+        descToggle.innerText =
+        "HIDE DESCRIPTION";
+    }
+};
+
+</script>
 
 </body>
 

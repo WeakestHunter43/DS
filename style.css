@@ -256,3 +256,116 @@ button:disabled{
         font-size:24px;
     }
 }
+
+.log{
+
+    margin-top:20px;
+
+    background:#0b0d12;
+
+    padding:15px;
+
+    border-radius:10px;
+
+    height:400px;
+
+    overflow:auto;
+
+    font-size:13px;
+
+    line-height:1.7;
+
+    font-family:monospace;
+
+    white-space:pre-wrap;
+
+    border:1px solid #222;
+}
+
+.success{
+
+    color:#4ade80;
+}
+
+.fail{
+
+    color:#f87171;
+}
+
+.warn{
+
+    color:#facc15;
+}
+
+.info{
+
+    color:#60a5fa;
+}
+
+.patch{
+
+    color:#22d3ee;
+}
+
+.update{
+
+    color:#c084fc;
+}
+
+.slot{
+
+    color:#fb923c;
+}
+
+.title{
+
+    color:#ffffff;
+
+    font-weight:bold;
+}
+
+.desc-wrapper{
+
+    margin-bottom:20px;
+}
+
+.desc-toggle{
+
+    width:100%;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#222938;
+
+    color:white;
+
+    font-size:15px;
+
+    cursor:pointer;
+
+    margin-bottom:12px;
+}
+
+.desc{
+
+    background:#11141c;
+
+    padding:18px;
+
+    border-radius:10px;
+
+    line-height:1.8;
+
+    overflow:hidden;
+
+    transition:0.3s;
+}
+
+.desc.collapsed{
+
+    display:none;
+}
